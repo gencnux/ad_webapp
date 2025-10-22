@@ -1,0 +1,36 @@
+{% extends "remote/dashboard.html" %}
+{% block content %}
+
+<h2 class="mb-4">👥 Kullanıcı Yetki Yönetimi</h2>
+
+{% if message %}
+<div class="alert alert-info">{{ message }}</div>
+{% endif %}
+
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Kullanıcı</th>
+            <th>LDAP Grupları</th>
+            <th>Güncelle</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in user_data %}
+        <tr>
+            <td>{{ u.username }}</td>
+            <td>{{ u.groups|join:", " }}</td>
+            <td>
+                <form method="post" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="target_user" value="{{ u.username }}">
+                    <input type="text" name="new_groups" class="form-control form-control-sm" placeholder="virgülle ayır: IT_ADMIN, HR">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Güncelle</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

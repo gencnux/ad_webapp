@@ -1,0 +1,37 @@
+{% extends "remote/dashboard.html" %}
+{% block title %}Komut Geçmişi{% endblock %}
+{% block content %}
+<h3 class="mb-4">📜 Komut Geçmişi</h3>
+
+<table class="table table-bordered table-sm">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Komut</th>
+            <th>Kullanıcı</th>
+            <th>Parametreler</th>
+            <th>Tarih</th>
+            <th>Çıktı</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in logs %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ log.command_id }}</td>
+            <td>{{ log.user.username }}</td>
+            <td><code>{{ log.parameters }}</code></td>
+            <td>{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#output{{ forloop.counter }}">
+                    Göster
+                </button>
+                <div class="collapse mt-2" id="output{{ forloop.counter }}">
+                    <pre class="bg-light p-2">{{ log.output }}</pre>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

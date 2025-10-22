@@ -1,0 +1,35 @@
+{% extends "remote/dashboard.html" %}
+{% block content %}
+
+<h2 class="mb-4">📜 Komut Geçmişim</h2>
+
+<form method="get" class="mb-3">
+    <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Komut adıyla filtrele...">
+</form>
+
+{% if logs %}
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Tarih</th>
+            <th>Komut</th>
+            <th>Parametreler</th>
+            <th>Çıktı</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.timestamp|date:"d.m.Y H:i" }}</td>
+            <td>{{ log.command_id }}</td>
+            <td>{{ log.parameters }}</td>
+            <td><pre style="white-space: pre-wrap;">{{ log.output|truncatechars:300 }}</pre></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">Henüz komut geçmişiniz bulunmuyor.</div>
+{% endif %}
+
+{% endblock %}

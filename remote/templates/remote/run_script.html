@@ -1,0 +1,219 @@
+{% extends "remote/dashboard.html" %}
+{% load read_script get_item groupby %}
+{% block content %}
+
+
+<!-- 👤 Oturum bilgisi kutusu -->
+<div class="alert alert-secondary d-flex justify-content-between align-items-center">
+    <div>
+        <strong>👤 Kullanıcı:</strong> {{ user_info.username }}<br>
+        <strong>🛡️ LDAP Grupları:</strong> {{ user_info.groups|join:", " }}
+    </div>
+    <div class="text-muted">🕒 Oturum aktif</div>
+</div>
+
+<!-- ⭐ Favori Komutlar -->
+{% if favorite_commands %}
+<h4 class="mt-4">⭐ Sık Kullanılan Komutlar</h4>
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for cmd in favorite_commands %}
+    <div class="col">
+        <div class="card h-100 border-warning shadow-sm">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">
+                            <i class="fas {{ cmd.icon }}"></i> {{ cmd.name }}
+                        </h5>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="toggle_favorite" value="{{ cmd.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Favoriden çıkar">
+                                <i class="fas fa-star"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <p class="card-text">{{ cmd.description }}</p>
+                </div>
+                <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="command_id" value="{{ cmd.id }}">
+    <input type="hidden" name="open_form" value="true">
+    <button type="submit" class="btn btn-primary w-100 mt-2">Parametreleri Gir</button>
+</form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ⚙️ Tüm Komutlar -->
+<h2 class="mt-4">⚙️ Komutlar</h2>
+<p class="text-muted">Toplam görünür komut: {{ commands|length }}</p>
+
+<input type="text" id="commandSearch" class="form-control mb-3" placeholder="Komut ara..." onkeyup="filterCommands()">
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for category, group in commands|groupby:"category" %}
+        <h4 class="mt-4">{{ category }}</h4>
+        {% for cmd in group %}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title">
+                                <i class="fas {{ cmd.icon }}"></i> {{ cmd.name }}
+                            </h5>
+                            {% if cmd.help_url %}
+                            <a href="{{ cmd.help_url }}" target="_blank" class="btn btn-sm btn-outline-info" title="Yardım">
+                                <i class="fas fa-question-circle"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        <p class="card-text">{{ cmd.description }}</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="command_id" value="{{ cmd.id }}">
+                        <button type="submit" class="btn btn-primary w-100 mt-2">Çalıştır</button>
+                    </form>
+                    <form method="post" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="toggle_favorite" value="{{ cmd.id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary w-100" title="Favorilere ekle">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endfor %}
+</div>
+
+<!-- 🔧 Parametre Formu -->
+{% if selected_command %}
+<hr>
+<h4 class="mt-4">🔧 Parametreler: {{ selected_command.name }}</h4>
+<form method="post" onsubmit="showSpinner()">
+    {% csrf_token %}
+    <input type="hidden" name="command_id" value="{{ selected_command.id }}">
+    {% for param in selected_command.parameters %}
+        <div class="mb-3">
+            <label class="form-label">{{ param.label }}</label>
+            <input type="text" name="{{ param.name }}" class="form-control" required>
+        </div>
+    {% endfor %}
+    <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="test_mode" id="testMode">
+        <label class="form-check-label" for="testMode">
+            🧪 Test Modunda Çalıştır (gerçek etki yaratmaz)
+        </label>
+    </div>
+    <button type="submit" class="btn btn-success">Çalıştır</button>
+    <div id="spinner" class="spinner text-muted" style="display:none;">⏳ Komut çalıştırılıyor...</div>
+</form>
+{% endif %}
+
+<!-- 📤 Komut Çıktısı -->
+{% if output %}
+<div id="outputSection" class="mt-4">
+    <h5>📤 Komut Çıktısı:</h5>
+    <div class="output-box border p-3 bg-light rounded">
+        <button class="btn btn-sm btn-outline-dark float-end" onclick="copyOutput()">Kopyala</button>
+        <pre id="outputText" class="mt-2 mb-0">{{ output }}</pre>
+    </div>
+    {% if selected_command.id == "connect_rdp" or selected_command.id == "connect_ps" %}
+    <div class="alert alert-info mt-3">
+        💡 Bu komut doğrudan bağlantı başlatmaz. Aşağıdaki komutu masaüstünüzde çalıştırarak bağlantıyı başlatabilirsiniz.
+    </div>
+    {% endif %}
+</div>
+<script>
+    setTimeout(() => {
+        document.getElementById("outputSection")?.scrollIntoView({ behavior: "smooth" });
+    }, 300);
+</script>
+{% endif %}
+{% if table_data %}
+<div class="table-responsive mt-3">
+    <table class="table table-bordered table-sm">
+        <thead>
+            <tr>
+                {% for header in table_data.0 %}
+                <th>{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+    {% for row in table_data.1 %}
+    <tr>
+        {% for header in table_data.0 %}
+        <td>{{ row|get_item:header }}</td>
+        {% endfor %}
+        <td>  {# ✅ Yeni hücre: Kapat butonu #}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="command_id" value="disable_netbios_adapter">
+                <input type="hidden" name="adapter" value="{{ row|get_item:'Name' }}">
+                <input type="hidden" name="target" value="{{ request.POST.target }}">
+                <button type="submit" class="btn btn-sm btn-danger">Kapat</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- 📜 Komut Geçmişim -->
+<h4 class="mt-5">📜 Son Komutlarım</h4>
+{% if user_logs %}
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            <th>Tarih</th>
+            <th>Komut</th>
+            <th>Parametreler</th>
+            <th>Çıktı (ilk 100 karakter)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in user_logs %}
+        <tr>
+            <td>{{ log.timestamp|date:"d.m.Y H:i" }}</td>
+            <td>{{ log.command_id }}</td>
+            <td>{{ log.parameters }}</td>
+            <td>{{ log.output|truncatechars:100 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'my_logs' %}" class="btn btn-sm btn-outline-secondary">Tüm geçmişi görüntüle</a>
+{% else %}
+<div class="alert alert-info">Henüz komut geçmişiniz yok.</div>
+{% endif %}
+
+<script>
+function copyOutput() {
+    const output = document.getElementById("outputText");
+    navigator.clipboard.writeText(output.innerText);
+    alert("Çıktı kopyalandı!");
+}
+function showSpinner() {
+    document.getElementById("spinner").style.display = "block";
+}
+function filterCommands() {
+    const input = document.getElementById("commandSearch").value.toLowerCase();
+    const cards = document.querySelectorAll(".command-card");
+    cards.forEach(card => {
+        const title = card.querySelector(".card-title").innerText.toLowerCase();
+        card.style.display = title.includes(input) ? "block" : "none";
+    });
+}
+</script>
+
+{% endblock %}
