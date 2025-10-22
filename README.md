@@ -31,4 +31,3 @@ python manage.py runserver
 git clone https://github.com/caglar/powershell_web.git
 cd powershell_web
 docker compose up -d
-
