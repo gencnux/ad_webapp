@@ -26,3 +26,9 @@ source venv310/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
+=======
+```bash
+git clone https://github.com/caglar/powershell_web.git
+cd powershell_web
+docker compose up -d
+
